@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Kraber\Http\Utils;
@@ -18,15 +19,29 @@ class CurlWrapper
 	/**
 	 * CurlWrapper constructor.
 	 *
-	 * @param CurlHandle|null $handle An existing cURL session or null. Session is initialized only when required.
+	 * @param CurlHandle|CurlWrapper|null $handle An existing cURL session, an instance of CurlWrapper or null.
+	 * If an instance of CurlWrapper is given, cURL session will be detached from this instance.
 	 * @throws RuntimeException If cURL extension is not loaded.
 	 */
-	public function __construct(?CurlHandle $handle = null) {
-		if (!function_exists('curl_version')) {
+	public function __construct(CurlHandle|CurlWrapper|null $handle = null) {
+		if (self::isCurlEnabled() === false) {
 			throw new RuntimeException("cURL extension is not loaded.");
 		}
 		
+		if ($handle instanceof CurlWrapper) {
+			$handle = $handle->detach();
+		}
+		
 		$this->handle = $handle;
+	}
+	
+	/**
+	 * Check cURL extension is enabled.
+	 *
+	 * @return bool True if extension is enabled, false otherwise.
+	 */
+	public static function isCurlEnabled() : bool {
+		return function_exists('curl_version');
 	}
 	
 	/**
@@ -66,6 +81,7 @@ class CurlWrapper
 			$this->handle = curl_init();
 		}
 		catch(Throwable) {
+			$this->handle = null;
 			throw new RuntimeException("Unable to initializes cURL handle.");
 		}
 	}

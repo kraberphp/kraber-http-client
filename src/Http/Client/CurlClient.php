@@ -5,35 +5,48 @@ declare(strict_types=1);
 namespace Kraber\Http\Client;
 
 use Psr\Http\Client\ClientInterface;
-use Psr\Http\Message\ResponseFactoryInterface;
-use Psr\Http\Message\RequestInterface;
-use Psr\Http\Message\ResponseInterface;
-use Psr\Http\Client\ClientExceptionInterface;
+use Psr\Http\Message\{
+	ResponseFactoryInterface,
+	RequestInterface,
+	ResponseInterface
+};
 use Kraber\Http\Factory\ResponseFactory;
+use Kraber\Http\Utils\CurlWrapper;
 use CurlHandle;
 use Throwable;
+use RuntimeException;
 
+/**
+ * Class CurlClient
+ */
 class CurlClient implements ClientInterface
 {
+	/** @var ResponseFactoryInterface The response factory used to generate ResponseInterface. */
 	private ResponseFactoryInterface $responseFactory;
-	private ?CurlHandle $handle = null;
+	
+	/** @var CurlWrapper cURL function wrapper. */
+	private CurlWrapper $cURL;
 	
 	/**
 	 * CurlClient constructor.
 	 *
 	 * @param ResponseFactoryInterface|null $responseFactory Factory used to produce ResponseInterface.
-	 * @throws CurlClientException If cURL is not loaded.
+	 * If null is given Kraber\Http\Factory\ResponseFactory will be used.
+	 * @param CurlHandle|CurlWrapper|null $handle cURL handle to use, CurlWrapper or null.
+	 * @throws ClientException If cURL extension is not loaded.
 	 */
-	public function __construct(?ResponseFactoryInterface $responseFactory = null) {
-		if (!function_exists('curl_version')) {
-			throw new CurlClientException("cURL extension is not loaded.");
-		}
-		
+	public function __construct(?ResponseFactoryInterface $responseFactory = null, CurlHandle|CurlWrapper|null $handle = null) {
 		if ($responseFactory === null) {
 			$responseFactory = new ResponseFactory();
 		}
-		
 		$this->responseFactory = $responseFactory;
+		
+		try {
+			$this->cURL = new CurlWrapper($handle);
+		}
+		catch (RuntimeException $e) {
+			throw new ClientException($e->getMessage(), $e->getCode());
+		}
 	}
 	
 	/**
@@ -41,16 +54,16 @@ class CurlClient implements ClientInterface
 	 *
 	 * @param RequestInterface $request
 	 * @return ResponseInterface
-	 * @throws ClientExceptionInterface If an error happens while processing the request.
+	 * @throws ClientException If an error happens while processing the request.
+	 * @throws NetworkException If an error happens during cURL exec.
 	 */
 	public function sendRequest(RequestInterface $request) : ResponseInterface {
-		$this->ensureCurlResourceHandleIsValid();
-		
 		$response = $this->responseFactory->createResponse();
 		
-		curl_reset($this->handle);
-		curl_setopt_array($this->handle, $this->generateCurlOptionsFromRequest($request));
-		curl_setopt($this->handle, CURLOPT_HEADERFUNCTION, function($handle, $header) use (&$response) {
+		$this->ensureCurlSessionIsInitialized();
+		$this->cURL->reset();
+		$this->cURL->setOptArray($this->createCurlOptionsArrayFromRequest($request));
+		$this->cURL->setOpt(CURLOPT_HEADERFUNCTION, function($handle, $header) use (&$response) {
 			$length = strlen($header);
 			$headerLine = array_map('trim', explode(':', $header, 2));
 			if (!isset($headerLine[0]) || !isset($headerLine[1])) {
@@ -58,42 +71,49 @@ class CurlClient implements ClientInterface
 			}
 			
 			$response = $response->withAddedHeader($headerLine[0], $headerLine[1]);
-			
 			return $length;
 		});
-		$result = curl_exec($this->handle);
 		
+		$result = $this->cURL->exec();
 		if ($result === false) {
-			throw new NetworkException($request, curl_strerror(curl_errno($this->handle)));
+			throw new NetworkException($request, $this->cURL->error());
 		}
 		
 		try {
-			$headerSize = curl_getinfo($this->handle, CURLINFO_HEADER_SIZE);
-			$responseBody = substr($result, $headerSize);
-			
-			$response = $response->withStatus(curl_getinfo($this->handle, CURLINFO_HTTP_CODE));
+			$responseBody = substr($result, $this->cURL->getInfo(CURLINFO_HEADER_SIZE));
+			$response = $response->withStatus($this->cURL->getInfo(CURLINFO_HTTP_CODE));
 			$response->getBody()->write($responseBody);
 		}
 		catch (Throwable $t) {
-			throw new CurlClientException($request, $t->getMessage());
+			throw new ClientException($request, $t->getMessage());
 		}
 		
 		return $response;
 	}
 	
-	private function ensureCurlResourceHandleIsValid() : void {
-		if ($this->handle === null) {
+	/**
+	 * Ensure cURL session is initialized.
+	 *
+	 * @throws ClientException If unable to initializes cURL session.
+	 */
+	private function ensureCurlSessionIsInitialized() : void {
+		if ($this->cURL->isOpen() === false) {
 			try {
-				$this->handle = curl_init();
+				$this->cURL->init();
 			}
 			catch (Throwable) {
-				$this->handle = null;
-				throw new CurlClientException("Unable to initializes cURL handle.");
+				throw new ClientException("Unable to initializes cURL session.");
 			}
 		}
 	}
 	
-	private function generateCurlOptionsFromRequest(RequestInterface $request) : array {
+	/**
+	 * Create an array with cURL options based on provided request.
+	 *
+	 * @param RequestInterface $request The request to send.
+	 * @return array cURL options for the transfert.
+	 */
+	private function createCurlOptionsArrayFromRequest(RequestInterface $request) : array {
 		$options = [
 			CURLOPT_CUSTOMREQUEST => $request->getMethod(),
 			CURLOPT_URL => $request->getUri()->__toString(),
@@ -118,7 +138,7 @@ class CurlClient implements ClientInterface
 		
 		$options[CURLOPT_HTTPHEADER] = [];
 		foreach ($request->getHeaders() as $headerName => $headerValues) {
-			$options[CURLOPT_HTTPHEADER][] = trim($headerName).": ".implode(",", $headerValues);
+			$options[CURLOPT_HTTPHEADER][] = trim($headerName).": ".$request->getHeaderLine($headerName);
 		}
 		
 		return $options;

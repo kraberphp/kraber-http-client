@@ -8,7 +8,7 @@ use Psr\Http\Client\ClientExceptionInterface;
 use Exception;
 use Throwable;
 
-class CurlClientException extends Exception implements ClientExceptionInterface
+class ClientException extends Exception implements ClientExceptionInterface
 {
 	public function __construct($message = "", $code = 0, Throwable $previous = null)
 	{
