@@ -118,8 +118,7 @@ class CurlClient implements ClientInterface
 			CURLOPT_CUSTOMREQUEST => $request->getMethod(),
 			CURLOPT_URL => $request->getUri()->__toString(),
 			CURLOPT_ENCODING => "",
-			CURLOPT_HEADER => true,
-			CURLOPT_RETURNTRANSFER => true,
+			CURLOPT_RETURNTRANSFER => true
 		];
 		
 		$content = $request->getBody()->getContents();
