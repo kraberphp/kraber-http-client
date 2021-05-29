@@ -74,13 +74,12 @@ class CurlClient implements ClientInterface
 			return $length;
 		});
 		
-		$result = $this->cURL->exec();
-		if ($result === false) {
+		$responseBody = $this->cURL->exec();
+		if ($responseBody === false) {
 			throw new NetworkException($request, $this->cURL->error());
 		}
 		
 		try {
-			$responseBody = substr($result, $this->cURL->getInfo(CURLINFO_HEADER_SIZE));
 			$response = $response->withStatus($this->cURL->getInfo(CURLINFO_HTTP_CODE));
 			$response->getBody()->write($responseBody);
 		}
