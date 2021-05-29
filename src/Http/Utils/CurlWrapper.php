@@ -19,19 +19,9 @@ class CurlWrapper
 	/**
 	 * CurlWrapper constructor.
 	 *
-	 * @param CurlHandle|CurlWrapper|null $handle An existing cURL session, an instance of CurlWrapper or null.
-	 * If an instance of CurlWrapper is given, cURL session will be detached from this instance.
-	 * @throws RuntimeException If cURL extension is not loaded.
+	 * @param CurlHandle|null $handle An existing cURL session or null.
 	 */
-	public function __construct(CurlHandle|CurlWrapper|null $handle = null) {
-		if (self::isCurlEnabled() === false) {
-			throw new RuntimeException("cURL extension is not loaded.");
-		}
-		
-		if ($handle instanceof CurlWrapper) {
-			$handle = $handle->detach();
-		}
-		
+	public function __construct(?CurlHandle $handle = null) {
 		$this->handle = $handle;
 	}
 	
@@ -40,7 +30,7 @@ class CurlWrapper
 	 *
 	 * @return bool True if extension is enabled, false otherwise.
 	 */
-	public static function isCurlEnabled() : bool {
+	public function isCurlEnabled() : bool {
 		return function_exists('curl_version');
 	}
 	
@@ -59,7 +49,7 @@ class CurlWrapper
 	/**
 	 * Ensure cURL session is initialize otherwise try to initialize a new one.
 	 *
-	 * @throws RuntimeException If unable to initializes cURL handle.
+	 * @throws RuntimeException If unable to initializes cURL session.
 	 */
 	private function ensureCurlSessionIsInitialized() : void {
 		if ($this->isOpen() === false) {
@@ -73,17 +63,15 @@ class CurlWrapper
 	 * @throws RuntimeException If previous cURL session is not closed or if unable to initializes a new cURL session.
 	 */
 	public function init() : void {
+		if ($this->isCurlEnabled() === false) {
+			throw new RuntimeException("cURL extension is not loaded.");
+		}
+		
 		if ($this->isOpen() === true) {
 			throw new RuntimeException("Previous cURL session has not been closed / detached.");
 		}
 		
-		try {
-			$this->handle = curl_init();
-		}
-		catch(Throwable) {
-			$this->handle = null;
-			throw new RuntimeException("Unable to initializes cURL handle.");
-		}
+		$this->handle = curl_init();
 	}
 	
 	/**
@@ -131,9 +119,9 @@ class CurlWrapper
 	 * Return string describing the given error code.
 	 *
 	 * @param int $errno One of the cURL error codes constants.
-	 * @return string|null Returns error description or null for invalid error code.
+	 * @return string Returns error description.
 	 */
-	public static function strerror(int $errno) : ?string {
+	public static function strerror(int $errno) : string {
 		return curl_strerror($errno);
 	}
 	
@@ -183,12 +171,10 @@ class CurlWrapper
 	/**
 	 * Gets cURL version information.
 	 *
-	 * @param int $opt
-	 * @param mixed $value
 	 * @return array|false
 	 */
-	public static function version(int $age = CURLVERSION_NOW) : array|false {
-		return curl_version($age);
+	public static function version() : array|false {
+		return curl_version();
 	}
 	
 	/**

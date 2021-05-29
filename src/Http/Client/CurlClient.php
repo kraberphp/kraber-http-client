@@ -41,11 +41,11 @@ class CurlClient implements ClientInterface
 		}
 		$this->responseFactory = $responseFactory;
 		
-		try {
-			$this->cURL = new CurlWrapper($handle);
+		if ($handle instanceof CurlWrapper) {
+			$this->cURL = $handle;
 		}
-		catch (RuntimeException $e) {
-			throw new ClientException($e->getMessage(), $e->getCode());
+		else {
+			$this->cURL = new CurlWrapper($handle);
 		}
 	}
 	
@@ -84,7 +84,7 @@ class CurlClient implements ClientInterface
 			$response->getBody()->write($responseBody);
 		}
 		catch (Throwable $t) {
-			throw new ClientException($request, $t->getMessage());
+			throw new ClientException($t->getMessage());
 		}
 		
 		return $response;

@@ -2,9 +2,10 @@
 
 namespace Kraber\Test;
 
+use Mockery\Adapter\Phpunit\MockeryTestCase;
 use ReflectionClass;
 
-class TestCase extends \PHPUnit\Framework\TestCase
+class TestCase extends MockeryTestCase
 {
 	public function getPropertyValue(object|string $class, string $property) : mixed {
 		$reflectionClass = new ReflectionClass($class);
