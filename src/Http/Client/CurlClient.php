@@ -100,7 +100,7 @@ class CurlClient implements ClientInterface
 			try {
 				$this->cURL->init();
 			}
-			catch (Throwable) {
+			catch (RuntimeException) {
 				throw new ClientException("Unable to initializes cURL session.");
 			}
 		}
