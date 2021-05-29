@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace Kraber\Http\Utils;
 
+use Kraber\Contracts\Http\Utils\CurlWrapperInterface;
 use CurlHandle;
-use Throwable;
 use RuntimeException;
 
 /**
  * Class CurlWrapper
  */
-class CurlWrapper
+class CurlWrapper implements CurlWrapperInterface
 {
 	/** @var CurlHandle|null cURL handle. */
 	private ?CurlHandle $handle = null;

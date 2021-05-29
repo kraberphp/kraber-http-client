@@ -11,6 +11,7 @@ use Psr\Http\Message\{
 	ResponseInterface
 };
 use Kraber\Http\Factory\ResponseFactory;
+use Kraber\Contracts\Http\Utils\CurlWrapperInterface;
 use Kraber\Http\Utils\CurlWrapper;
 use CurlHandle;
 use Throwable;
@@ -32,16 +33,19 @@ class CurlClient implements ClientInterface
 	 *
 	 * @param ResponseFactoryInterface|null $responseFactory Factory used to produce ResponseInterface.
 	 * If null is given Kraber\Http\Factory\ResponseFactory will be used.
-	 * @param CurlHandle|CurlWrapper|null $handle cURL handle to use, CurlWrapper or null.
+	 * @param CurlHandle|CurlWrapperInterface|null $handle cURL handle to use, CurlWrapperInterface or null.
 	 * @throws ClientException If cURL extension is not loaded.
 	 */
-	public function __construct(?ResponseFactoryInterface $responseFactory = null, CurlHandle|CurlWrapper|null $handle = null) {
+	public function __construct(
+		?ResponseFactoryInterface $responseFactory = null,
+		CurlHandle|CurlWrapperInterface|null $handle = null
+	) {
 		if ($responseFactory === null) {
 			$responseFactory = new ResponseFactory();
 		}
 		$this->responseFactory = $responseFactory;
 		
-		if ($handle instanceof CurlWrapper) {
+		if (is_subclass_of($handle, CurlWrapperInterface::class) === true) {
 			$this->cURL = $handle;
 		}
 		else {
