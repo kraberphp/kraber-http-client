@@ -30,7 +30,7 @@ class CurlClientTest extends TestCase
 
     public function testConstructorInitializeProperties()
     {
-        $curlClient = new CurlClient();
+        $curlClient = new CurlClient(new ResponseFactory());
 
         $this->assertInstanceOf(ResponseFactory::class, $this->getPropertyValue($curlClient, 'responseFactory'));
         $this->assertInstanceOf(CurlWrapper::class, $this->getPropertyValue($curlClient, 'cURL'));
