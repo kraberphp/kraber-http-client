@@ -13,11 +13,14 @@ env:
     - XDEBUG_MODE=coverage
 
 install:
-  - composer install --dev --no-interaction
+  - composer install --no-interaction
   - composer require scrutinizer/ocular --no-interaction
 
+before_script:
+  - mkdir -p build/{logs, coverage}
+
 script:
-  - composer test -- --coverage-clover=build/logs/clover.xml
+  - composer ci
 
 after_script:
-  - ./vendor/bin/ocular code-coverage:upload --format=php-clover build/logs/clover.xml
+  - composer ocular code-coverage:upload --format=php-clover build/logs/clover.xml

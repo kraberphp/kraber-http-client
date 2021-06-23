@@ -21,19 +21,19 @@
          verbose="false"
          testdox="true">
     <testsuites>
-        <testsuite name="Integration">
-            <directory>./tests/integration</directory>
+        <testsuite name="PSR-18 Integration">
+            <directory>tests/integration/</directory>
         </testsuite>
     </testsuites>
 
-    <coverage cacheDirectory="./build/coverage/cache"
+    <coverage cacheDirectory="build/coverage/cache/"
               includeUncoveredFiles="true"
               processUncoveredFiles="true"
               pathCoverage="false"
               ignoreDeprecatedCodeUnits="true"
               disableCodeCoverageIgnore="true">
         <include>
-            <directory suffix=".php">./src</directory>
+            <directory suffix=".php">src/</directory>
         </include>
     </coverage>
 
